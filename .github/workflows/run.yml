@@ -1,0 +1,24 @@
+name: run-code
+on: [push]
+jobs:
+  compile-run:
+    runs-on: windows-2019
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v3
+      - name: Setup | Rust
+        uses: ATiltedTree/setup-rust@v1.0.5
+        with:
+          rust-version: stable
+      
+      - name: Display hello world pwsh
+        run: |
+          write-host "hello world pwsh"
+          $PSVersionTable
+        shell: pwsh
+
+      - name: Display hello world powershell
+        run: |
+          write-host "hello world pwsh"
+          $PSVersionTable
+        shell: powershell
