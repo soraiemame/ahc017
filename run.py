@@ -9,6 +9,17 @@ logger.setLevel(DEBUG)
 logger.addHandler(handler)
 logger.propagate = False
 
-for i in range(10):
-    logger.debug("Hello")
-    sleep(1)
+
+def main():
+    TESTCASES = 1000
+    cnt = 0
+    for i in range(TESTCASES):
+        infile = f".\\tools\\in\\{i:04d}.txt"
+        proc = run([".\\target\\release\\ahc017.exe","<",infile],shell=True,stdout=open("temp_out.txt","w"),stderr=PIPE,encoding="utf-8")
+        get_point = run(f".\\tools\\vis.exe {infile} temp_out.txt",shell=True,stdout=PIPE,stderr=PIPE,encoding="utf-8")
+        score = int(get_point.stdout[8:])
+        cnt += score
+        logger.debug(f"Test {i:04d}: {str(score).ljust(20,' ')} Score sum: {cnt}")
+
+if __name__ == "__main__":
+    main()
