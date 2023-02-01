@@ -10,7 +10,6 @@ jobs:
         uses: ATiltedTree/setup-rust@v1.0.5
         with:
           rust-version: stable
-      
       - name: Display hello world pwsh
         run: |
           write-host "hello world pwsh"
