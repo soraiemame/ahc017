@@ -1,13 +1,100 @@
 use proconio::{input, marker::Usize1};
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
+use std::f64::consts::PI;
 
 const T9: u32 = 1_000_000_000;
 
 fn main() {
     get_time();
     let input = Input::from_input();
-    solve(input);
+    // solve(input);
+    // solve2(input);
+    solve3(input);
+}
+
+// a(500,500),b(500,1000),p
+fn deg(x: u32, y: u32) -> f64 {
+    if x == 500 && y == 500 {
+        return 0.0;
+    }
+    let theta = (y as f64 - 500.0).atan2(x as f64 - 500.0) + PI;
+    theta
+}
+fn solve2(input: Input) {
+    let mut res = vec![0; input.m];
+    let mut day_count = vec![0; input.d];
+    let mut ps = vec![0; input.n];
+    let mut turn_ps = vec![vec![]; input.d];
+    for i in 0..input.n {
+        let p = input.p[i];
+        let theta = deg(p.0, p.1);
+        // eprintln!("{} {} {}",p.0,p.1,theta);
+        let c = (theta / (2.0 * PI / input.d as f64 / 2.0)).floor() as usize;
+        ps[i] = c % input.d;
+        turn_ps[c % input.d].push(i);
+    }
+    let mut turn_es = vec![vec![]; input.d];
+    for i in 0..input.m {
+        let idx = ps[input.es[i].0];
+        if day_count[idx] != input.k {
+            res[i] = idx;
+            turn_es[idx].push(i);
+            day_count[idx] += 1;
+        }
+    }
+    let mut is_unused = vec![false;input.m];
+    let mut unused = vec![vec![];input.d];
+    for i in 0..input.d {
+        let mut uf = acl::Dsu::new(input.n);
+        for &j in &turn_es[i] {
+            if !uf.same(input.es[j].0,input.es[j].1) {
+                uf.merge(input.es[j].0, input.es[j].1);
+                unused[i].push(j);
+                is_unused[j] = true;
+            }
+        }
+    }
+    for i in 0..input.d {
+        let mut rem = vec![];
+        for &j in &turn_es[i] {
+            if !is_unused[j] {
+                rem.push(j);
+            }
+        }
+        turn_es[i] = rem;
+    }
+    for i in 0..input.d {
+        for &j in &unused[i] {
+            turn_es[(i + input.d / 2) % input.d].push(j);
+        }
+    }
+
+    for i in 0..input.d {
+        for &j in &turn_es[i] {
+            res[j] = i;
+        }
+    }
+    print_ans(res);
+}
+fn solve3(input: Input) {
+    let mut res = vec![0; input.m];
+    let mut day_count = vec![0; input.d];
+    let group_es = (input.n + input.d - 1) / input.d;
+    let mut fl = false;
+    for i in 0..input.m {
+        let idx = if fl {
+            input.es[i].0 / group_es
+        } else {
+            input.es[i].1 / group_es
+        };
+        fl = !fl;
+        if day_count[idx] != input.k {
+            res[i] = idx;
+            day_count[idx] += 1;
+        }
+    }
+    print_ans(res);
 }
 
 fn solve(input: Input) {
@@ -28,7 +115,7 @@ fn solve(input: Input) {
         }
         let cur_score = cs.try_apply(&input, edge_idx, next_day);
         if cur_score.0 > cs.cur_score {
-            cs.apply(edge_idx,next_day,cur_score);
+            cs.apply(edge_idx, next_day, cur_score);
         }
 
         // let mut edge_idx2 = rng.rand(input.m);
@@ -115,7 +202,7 @@ impl State {
             }
         }
         let mut cur_score = 0;
-        let mut turn_scores = vec![0;input.d];
+        let mut turn_scores = vec![0; input.d];
         for i in 0..input.d {
             for j in 0..turn_es[i].len() {
                 for k in j + 1..turn_es[i].len() {
@@ -144,7 +231,7 @@ impl State {
             turn_es,
         }
     }
-    fn try_apply(&self, input: &Input, edge_idx: usize, next_day: usize) -> (u64,u64,u64) {
+    fn try_apply(&self, input: &Input, edge_idx: usize, next_day: usize) -> (u64, u64, u64) {
         let mut now = self.cur_score;
         // 辺を消して差分更新
         let mut next1 = self.turn_scores[self.res[edge_idx]];
@@ -186,9 +273,9 @@ impl State {
         // next2 *= coef as u64;
 
         now += next2;
-        (now,next1,next2)
+        (now, next1, next2)
     }
-    fn edge_dist(&self,input: &Input,a: usize,b: usize) -> u32 {
+    fn edge_dist(&self, input: &Input, a: usize, b: usize) -> u32 {
         min!(
             self.dist[input.es[a].0][input.es[b].0],
             self.dist[input.es[a].1][input.es[b].0],
@@ -196,7 +283,12 @@ impl State {
             self.dist[input.es[a].1][input.es[b].1]
         )
     }
-    fn apply(&mut self, edge_idx: usize, next_day: usize,(next_score,next1,next2): (u64,u64,u64)) {
+    fn apply(
+        &mut self,
+        edge_idx: usize,
+        next_day: usize,
+        (next_score, next1, next2): (u64, u64, u64),
+    ) {
         self.cur_score = next_score;
         let prev_day = self.res[edge_idx];
         self.day_count[prev_day] -= 1;
@@ -211,11 +303,11 @@ impl State {
         self.idx[edge_idx] = self.turn_es[next_day].len();
         self.turn_es[next_day].push(edge_idx);
     }
-    fn edge_dist2(&self,input: &Input,a: usize,b: usize) -> u64 {
+    fn edge_dist2(&self, input: &Input, a: usize, b: usize) -> u64 {
         let d = self.edge_dist(input, a, b) as u64;
         d * d
     }
-    fn try_swap_edge(&self,input: &Input,edge_idx: usize,edge_idx2: usize) -> (u64,u64,u64) {
+    fn try_swap_edge(&self, input: &Input, edge_idx: usize, edge_idx2: usize) -> (u64, u64, u64) {
         let mut now = self.cur_score;
         let mut next1 = self.turn_scores[self.res[edge_idx]];
         now -= next1;
@@ -245,9 +337,9 @@ impl State {
         }
         now += next2;
 
-        (now,next1,next2)
+        (now, next1, next2)
     }
-    fn swap_edge(&mut self,edge_idx: usize,edge_idx2: usize,scores: (u64,u64,u64)) {
+    fn swap_edge(&mut self, edge_idx: usize, edge_idx2: usize, scores: (u64, u64, u64)) {
         let next_day1 = self.res[edge_idx2];
         let next_day2 = self.res[edge_idx];
         self.apply(edge_idx2, next_day2, scores);
@@ -341,6 +433,80 @@ pub fn get_time() -> f64 {
         #[cfg(not(feature = "local"))]
         {
             (ms - STIME)
+        }
+    }
+}
+
+pub mod acl {
+    pub struct Dsu {
+        n: usize,
+        // root node: -1 * component size
+        // otherwise: parent
+        parent_or_size: Vec<i32>,
+    }
+
+    impl Dsu {
+        pub fn new(size: usize) -> Self {
+            Self {
+                n: size,
+                parent_or_size: vec![-1; size],
+            }
+        }
+
+        pub fn merge(&mut self, a: usize, b: usize) -> usize {
+            assert!(a < self.n);
+            assert!(b < self.n);
+            let (mut x, mut y) = (self.leader(a), self.leader(b));
+            if x == y {
+                return x;
+            }
+            if -self.parent_or_size[x] < -self.parent_or_size[y] {
+                std::mem::swap(&mut x, &mut y);
+            }
+            self.parent_or_size[x] += self.parent_or_size[y];
+            self.parent_or_size[y] = x as i32;
+            x
+        }
+
+        pub fn same(&mut self, a: usize, b: usize) -> bool {
+            assert!(a < self.n);
+            assert!(b < self.n);
+            self.leader(a) == self.leader(b)
+        }
+
+        pub fn leader(&mut self, a: usize) -> usize {
+            assert!(a < self.n);
+            if self.parent_or_size[a] < 0 {
+                return a;
+            }
+            self.parent_or_size[a] = self.leader(self.parent_or_size[a] as usize) as i32;
+            self.parent_or_size[a] as usize
+        }
+
+        pub fn size(&mut self, a: usize) -> usize {
+            assert!(a < self.n);
+            let x = self.leader(a);
+            -self.parent_or_size[x] as usize
+        }
+
+        pub fn groups(&mut self) -> Vec<Vec<usize>> {
+            let mut leader_buf = vec![0; self.n];
+            let mut group_size = vec![0; self.n];
+            for i in 0..self.n {
+                leader_buf[i] = self.leader(i);
+                group_size[leader_buf[i]] += 1;
+            }
+            let mut result = vec![Vec::new(); self.n];
+            for i in 0..self.n {
+                result[i].reserve(group_size[i]);
+            }
+            for i in 0..self.n {
+                result[leader_buf[i]].push(i);
+            }
+            result
+                .into_iter()
+                .filter(|x| !x.is_empty())
+                .collect::<Vec<Vec<usize>>>()
         }
     }
 }
